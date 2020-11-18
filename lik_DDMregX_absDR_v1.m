@@ -21,7 +21,7 @@ T0   = XX(10);
 
 for i = 1:length(RT)
     A(i) = cA_0 + cA_R * dR(i)      + cA_I * dI(i);
-    z(i) = cZ_0 + cZ_R * abs(dR(i)) + cZ_I * dI(i);
+    z(i) = cZ_0 + cZ_R * abs(dR(i)) + cZ_I * abs(dI(i));
     b(i) = cX_0 + cX_R * dR(i)      + cX_I * dI(i);
     x0(i) = z(i)*(2*(1 ./ ( 1 + exp(-b(i)) )) - 1);
     

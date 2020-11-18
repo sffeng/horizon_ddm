@@ -60,7 +60,6 @@ for sn = 1:length(sub)
     sub(sn).gender = ge{idx};
 end
 
-
 %% remove fast or slow RTs
 for sn = 1:length(sub)
     ind = (sub(sn).RT(:,5) > 0.1) & (sub(sn).RT(:,5) < 3);

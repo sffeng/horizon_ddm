@@ -4,6 +4,9 @@
 %% BASIC SETUP %% BASIC SETUP %% BASIC SETUP %% BASIC SETUP %%
 %% ========================================================================
 %%
+
+% TODO - pair down data set
+
 clear
 maindir     = '~/Dropbox/TEMP/2019_HorizonDDM/';
 fundir      = [maindir 'matlab/'];
@@ -20,7 +23,7 @@ defaultPlotParameters
 %% ========================================================================
 
 %% load human data
-sub = load_humanData_v1(datadir, 'allHorizonData_v2.csv', 'DDM_demographics.csv');
+sub = load_humanData_v1(datadir, 'allHorizonData_v2.csv', 'DDM_demographics.csv', 0);
 
 %% load Sam's MCMC parameters
 fname1 = 'fittedparams.csv';
@@ -522,9 +525,9 @@ saveFigurePdf(gcf, '~/Desktop/DDM_RTs')
 
 
 %% ========================================================================
-%% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %%
-%% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %%
-%% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %%
+%% ABS DR DI MODEL %% ABS DR DI MODEL %% ABS DR DI MODEL %%
+%% ABS DR DI MODEL %% ABS DR DI MODEL %% ABS DR DI MODEL %%
+%% ABS DR DI MODEL %% ABS DR DI MODEL %% ABS DR DI MODEL %%
 %% ========================================================================
 
 %% fit the model with absolute value of dR on threshold
@@ -541,10 +544,10 @@ UB_all = [    1     10     10     10      3      3      1      1      1      3  
 RTmin = 0.1;
 RTmax = 3;
 tic 
-fit_MLE = fit_MLE_DDM_absDR_v1(sub, M, RTmin, RTmax, X0_all, LB_all, UB_all);
+fit_MLE_abs = fit_MLE_DDM_absDR_v1(sub, M, RTmin, RTmax, X0_all, LB_all, UB_all);
 toc
 
-%% FIGURE 6 - Drift-diffusion model parameters in the Horizon Task
+%% FIGURE XXX - Drift-diffusion model parameters for abs(dR) abs(dI) model
 clear X1 X6
 vn1 = {
     'A1_0'
@@ -578,9 +581,9 @@ vn6 = {
 %         X6(i,sn) = getfield(sim(sn), vn6{i});
 %     end
 % end
-for sn = 1:length(fit_MLE)
-    X1(:,sn) = fit_MLE(sn).XXfit(:,1);
-    X6(:,sn) = fit_MLE(sn).XXfit(:,2);
+for sn = 1:length(fit_MLE_abs)
+    X1(:,sn) = fit_MLE_abs(sn).XXfit(:,1);
+    X6(:,sn) = fit_MLE_abs(sn).XXfit(:,2);
 end
 
 figure(1); clf;
@@ -598,6 +601,8 @@ thresh = 0.01;
 thresh2 = 0.005;
 thresh3 = 0.001;
 Ncomp = 10; % for multiple comparisons
+set(ax(5), 'ylim', [-0.035 0.035]);
+set(ax(8), 'ylim', [-0.06 0.09]);
 for i = 1:size(X1,1)
     axes(ax(i)); hold on;
     R = (rand(1,size(X1,2))-0.5)*0.25;
@@ -610,7 +615,7 @@ for i = 1:size(X1,1)
     end
     plot([0.5 3.5], [0 0], 'k--', 'linewidth', 1)
 end
-set(ax(8), 'ylim', [-0.06 0.08])
+% set(ax(8), 'ylim', [-0.06 0.08])
 set(ax(9), 'ylim', [-0.6 0.8])
 for i = 1:size(X1,1)
     axes(ax(i)); hold on;
@@ -682,8 +687,246 @@ set(t, 'fontweight', 'normal', 'units', 'normalized')
 set(t, 'position', [0.5000    1.08 0])
 saveFigurePdf(gcf, '~/Desktop/DDM_params_absDR')
 
+%% FIGURE XXX - posterior predictive
+% compute theoretical average behavior for fit parameter values
+r_vals = [-30:0.1:30];
+fit_MLE_abs = theory_ERDT_abs_v1(fit_MLE_abs, r_vals);
+% fit_MLEbest = theory_ERDT_v1(fit_MLEbest, r_vals);
+
+ft = fit_MLE_abs;
+dum = cat(3, ft.cc13_ana);
+cc13 = nanmean(dum,3);
+dum = cat(3, ft.cc22_ana);
+cc22 = nanmean(dum,3);
+
+dum = cat(3, ft.rt13_ana);
+rt13 = nanmean(dum,3);
+dum = cat(3, ft.rt22_ana);
+rt22 = nanmean(dum,3);
+
+binEdges = [-25:10:25];
+
+figure(1); clf;
+set(gcf, 'position', [611   305   680   400])
+hg = [0.12 0.16 0.11];
+wg = [0.2 0.13 0.07 0.03];
+[~,hb,wb,ax] = easy_gridOfEqualFigures(hg, wg);
+ax = ax(:);
+axes(ax(1)); hold on; l = plot(r_vals, cc13);
+axes(ax(2)); hold on; l(:,2) = plot(r_vals, cc22);
+
+axes(ax(3)); hold on; l(1,3) = plot(r_vals, rt13(:,1));
+axes(ax(5)); hold on; l(2,3) = plot(r_vals, rt13(:,2));
+axes(ax(4)); hold on; l(1,4) = plot(r_vals, rt22(:,1));
+axes(ax(6)); hold on; l(2,4) = plot(r_vals, rt22(:,2));
+
+e1 = plot_choiceCurves_v2(ax(1:2), sub, binEdges, 0.1, 3);
+set(e1, 'linestyle', 'none', 'markersize', 20)
+
+e1 = plot_rtCurves_sub_v1(ax(3:4), sub, 0.1 , 3)
+set(e1([2 4]), 'visible', 'off')
+set(e1, 'linestyle', 'none', 'markersize', 20)
+
+e1 = plot_rtCurves_sub_v1(ax(5:6), sub, 0.1 , 3)
+set(e1([1 3]), 'visible', 'off')
+set(e1, 'linestyle', 'none', 'markersize', 20)
+
+ff = 0.75;
+set(l(1,:), 'color', AZblue*ff+(1-ff));
+set(l(2,:), 'color', AZred*ff+(1-ff));
+
+set(ax(3:end), 'ylim', [0.3 1.1])
+
+axes(ax(1)); leg = legend([l(2,1) l(1,1) ], {'horizon 6' 'horizon 1'}, 'location', 'southeast');
+axes(ax(1)); title(''); xlabel('R(high info) - R(low info)')
+axes(ax(2)); title({''}); xlabel('R(left) - R(right)')
+axes(ax(3)); title({'horizon 1'}); ylabel('RT [seconds]'); xlabel('R(high info) - R(low info)')
+axes(ax(4)); title({''}); ylabel('RT [seconds]'); xlabel('R(left) - R(right)')
+axes(ax(5)); title({'horizon 6'}); ylabel(''); xlabel('R(high info) - R(low info)')
+axes(ax(6)); title({''}); ylabel(''); xlabel('R(left) - R(right)')
+
+set(leg, 'position', [0.2956    0.5974    0.1375    0.0862])
+
+set(ax, 'tickdir', 'out', 'xlim', [-35 35])
+wg2 = [wg(1) wg(2) wg(4)];
+wb2 = [wb(1) wb(2)+wb(3)+wg(3)];
+delta2 = 0.06;
+[b] = add_externalXlabels(wg2, hg, wb2, hb, delta2, {'choice' 'response time'})
+set(b, 'linestyle', 'none')
+delta = 0.075;
+[a] = add_externalYlabels_v1(wg, hg, wb, hb, delta, {'equal condition [2 2]' 'unequal condition [1 3]'})
+
+set([a b], 'fontsize', 18)
+set(b, 'fontsize', 20)
+set(ax, 'fontsize', 14)
+
+saveFigurePdf(gcf, '~/Desktop/DDM_posteriorPredictiveABS')
+
+%% parameter recovery for MLE fit -----------------------------------------
+%% simulate fake data with MLE parameters
+% TODO: 
+%   1. could scramble parameters 
+%   2. could use different set of trials
+
+clear fak
+dt = 0.001;
+for sn = 1:length(fit_MLE_abs)
+    fak_abs(sn) = simulate_Mmodel_abs_v1(fit_MLE_abs(sn).XXfit, dt, fit_MLE_abs(sn).dR, fit_MLE_abs(sn).dI, fit_MLE_abs(sn).gameLength);
+end
+
+%% fit fake data with MLE
+fit_fak_abs = fit_MLE_DDM_absDR_v1(fak_abs, M, RTmin, RTmax, X0_all, LB_all, UB_all);
+
+%% compare recovered parameters with original
+
+figure(1); clf
+set(gcf, 'position', [811   176   600   650])
+hg = ones(5,1)*0.1;
+wg = ones(4,1)*0.1;
+wg(1) = 0.27;
+wg(end) = 0.03;
+hg(1) = 0.07;
+hg(end) = 0.09;
+[ax, hb, wb] = easy_gridOfEqualFigures(hg, wg);
+[l, r, p] = plot_compareTwoParameterSets(ax, fit_MLE_abs, fit_fak_abs, names, 'sim', 'fit');
+
+clear t
+for i = 1:length(r)
+    for j = 1:length(r{i})
+        
+        axes(ax(j));
+        t(i,j) = text(1, 0.25-(i-1)*0.15, sprintf('r = %.2g', r{i}(j,j)), 'units', 'normalized', 'fontsize', 12, ...
+            'horizontalalignment', 'right')
+        
+    end
+end
+
+set(t(1,:), 'color', AZblue)
+set(t(2,:), 'color', AZred)
+delta = 0.08;
+delta2 = 0.04;
+[a, b] = add_variableNames_v1(wg, hg, wb, hb ,delta, delta2)
+
+saveFigurePdf(gcf, '~/Desktop/DDM_parameterRecoveryABS_MLE')
+
+%% model comparison between modified and original model
+mean(vertcat(fit_MLE.BIC) < vertcat(fit_MLE_abs.BIC))
+
+%% noise check ------------------------------------------------------------
+%% First simulate behavior leaving either c_R^\thresh or c_R^\drift at horizon 1 values
 
 
+clear fak
+dt = 0.001;
+for sn = 1:length(fit_MLE_abs)
+    
+    % parameters
+    XX = fit_MLE_abs(sn).XXfit;
+    
+    % keep c_R^\thresh constant with horizon cZ_R = XX(5,:);
+    XX_constantThreshold = XX;
+    XX_constantThreshold(5,2) = XX_constantThreshold(5,1);
+    
+    % keep c_R^\thresh constant with horizon cA_R = XX(2,:);
+    XX_constantDrift = XX;
+    XX_constantDrift(2,2) = XX_constantDrift(2,1);
+    
+    
+    fak_abs_constantThreshold(sn) = simulate_Mmodel_abs_v1(XX_constantThreshold, dt, fit_MLE_abs(sn).dR, fit_MLE_abs(sn).dI, fit_MLE_abs(sn).gameLength);
+    fak_abs_constantDrift(sn)     = simulate_Mmodel_abs_v1(XX_constantDrift, dt, fit_MLE_abs(sn).dR, fit_MLE_abs(sn).dI, fit_MLE_abs(sn).gameLength);
+end
+
+%% Then fit behavior with logisitic model to estimate noise
+priorFlag = 1;
+for sn = 1:length(sub)
+    fit_logistic_constantThreshold(sn) = fit_logistic_XXform_v1(fak_abs_constantThreshold(sn), priorFlag);
+    fit_logistic_constantDrift(sn)     = fit_logistic_XXform_v1(fak_abs_constantDrift(sn), priorFlag);
+end
+
+%% Then compare fit noise to noise fit to simulations with full model and fit to human data
+XX = cat(3, fit_logistic.x);
+bonus   = squeeze(XX(3,:,:));
+noise13 = squeeze(XX(2,:,:));
+noise22 = squeeze(XX(5,:,:));
+
+XX_constantThreshold = cat(3, fit_logistic_constantThreshold.x);
+bonus_constantThreshold   = squeeze(XX_constantThreshold(3,:,:));
+noise13_constantThreshold = squeeze(XX_constantThreshold(2,:,:));
+noise22_constantThreshold = squeeze(XX_constantThreshold(5,:,:));
+
+XX_constantDrift = cat(3, fit_logistic_constantDrift.x);
+bonus_constantDrift   = squeeze(XX_constantDrift(3,:,:));
+noise13_constantDrift = squeeze(XX_constantDrift(2,:,:));
+noise22_constantDrift = squeeze(XX_constantDrift(5,:,:));
+% fit_fak_abs_constantThreshold = fit_MLE_DDM_absDR_v1(fak_abs_constantThreshold, M, RTmin, RTmax, X0_all, LB_all, UB_all);
+% fit_fak_abs_constantDrift = fit_MLE_DDM_absDR_v1(fak_abs_constantDrift, M, RTmin, RTmax, X0_all, LB_all, UB_all);
+
+
+
+M13 = [nanmean(noise13,2) nanmean(noise13_constantThreshold,2) nanmean(noise13_constantDrift,2)];
+S13 = [nanstd(noise13,[],2) nanstd(noise13_constantThreshold,[],2) nanstd(noise13_constantDrift,[],2)]/sqrt(length(sub));
+
+M22 = [nanmean(noise22,2) nanmean(noise22_constantThreshold,2) nanmean(noise22_constantDrift,2)];
+S22 = [nanstd(noise22,[],2) nanstd(noise22_constantThreshold,[],2) nanstd(noise22_constantDrift,[],2)]/sqrt(length(sub));
+
+figure(1); clf; hold on
+errorbar(M22, S22)
+
+%% compare with sigma ratio horizon 1 / horizon 6
+R13 = [noise13(1,:)./noise13(2,:); noise13_constantThreshold(1,:)./noise13_constantThreshold(2,:); noise13_constantDrift(1,:)./noise13_constantDrift(2,:)];
+R22 = [noise22(1,:)./noise22(2,:); noise22_constantThreshold(1,:)./noise22_constantThreshold(2,:); noise22_constantDrift(1,:)./noise22_constantDrift(2,:)];
+
+figure(1); clf;
+set(gcf, 'position', [1     1   588   307])
+hb = [0.1 0.1];
+wb = [0.1 0.1 0.03];
+[ax, wg, hg] = easy_gridOfEqualFigures(hb, wb);
+axes(ax(1)); hold on;
+rang = 0.125;
+l1 = plot(repmat([1 2 3]', [1 size(R13,2)])'+(rand(size(R13'))-0.5)*rang, R13','o');
+% l2 = plot(repmat([4 5 6]', [1 size(R13,2)])'+(rand(size(R13'))-0.5)*rang, R13','o');
+plot([0 4], [1 1], 'k--', 'linewidth', 1)
+
+set([l1], 'markersize', 5, 'linewidth', 1)
+b = boxplot([R13' ], 'notch', 'on', 'widths', 0.25);
+set(b(7,:), 'visible', 'off')
+set(b, 'color', 'k', 'linewidth', 2)
+ylabel({'\sigma ratio' 'horizon 1 / horizon 6'})
+
+t = title('[1 3] condition');
+
+
+axes(ax(2)); hold on;
+rang = 0.125;
+% l1 = plot(repmat([1 2 3]', [1 size(R13,2)])'+(rand(size(R13'))-0.5)*rang, R13','o');
+l2 = plot(repmat([1 2 3]', [1 size(R13,2)])'+(rand(size(R13'))-0.5)*rang, R13','o');
+
+set([l2], 'markersize', 5, 'linewidth', 1)
+b = boxplot([R22' ], 'notch', 'on', 'widths', 0.25);
+set(b(7,:), 'visible', 'off')
+set(b, 'color', 'k', 'linewidth', 2)
+ylabel({'\sigma ratio' 'horizon 1 / horizon 6'})
+plot([0 4], [1 1], 'k--', 'linewidth', 1)
+
+t(2) = title('[2 2] condition');
+
+set(ax, 'tickdir', 'out', 'xtick', [1:3], ...
+    'xticklabel', {'humans' 'c_R^\beta constant' 'c_R^\mu constant'}, ...
+    'view', [90 90], 'yaxislocation', 'left')
+% set(ax(2), 'yticklabel')
+set(ax, 'ylim', [-0.2 2.2], 'box', 'off')
+ax(1).TickLabelInterpreter='tex';
+ax(2).TickLabelInterpreter='tex';
+set(t, 'fontweight', 'normal')
+
+set([l1(1) l2(1)], 'color', AZred)
+set([l1(2) l2(2)], 'color', AZblue)
+set([l1(3) l2(3)], 'color', AZsand)
+
+addABCs(ax, [-0.14 0.08], 28)
+saveFigurePdf(gcf, '~/Desktop/ABS_ratios')
+
+% add_externalYlabels_v1(hg, wg, hb, wb, 0, {'a' 'b'})
 
 %% ========================================================================
 %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %% MLE FIT %%
